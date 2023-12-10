@@ -41,8 +41,6 @@ export class CitationSuggest extends EditorSuggest<Suggestion> {
 			return null;
 		}
 
-        const {editor} = this.context;
-
         const triggerPhrase = '[@';
         const startPos = this.context?.start || {
         line: cursor.line,

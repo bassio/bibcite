@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
-import CitationSuggest from "./CitationSuggest.ts";
+import { CitationSuggest } from "CitationSuggest.ts";
 
 // Remember to rename these classes and interfaces!
 
