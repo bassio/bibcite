@@ -1,0 +1,19 @@
+
+.reference-div{
+    margin-top: 10px;
+    margin-bottom: 10px;
+    font-size: small;
+}
+
+.reference-div .reference-citekey{
+    font-weight: bold;
+}
+
+.reference-citekey{
+    font-weight: bold;
+}
+.reference-div .reference-journal{
+    color: var(--text-accent);
+    font-size: small;
+    font-style: italic;
+}
