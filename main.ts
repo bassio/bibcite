@@ -15,6 +15,18 @@ const DEFAULT_SETTINGS: BibcitePluginSettings = {
 
 export default class BibcitePlugin extends Plugin {
 	settings: BibcitePluginSettings;
+	_activeFilePath: string;
+
+    get activeFilePath() {
+        return this._activeFilePath;
+    }
+    set activeFilePath(path) {
+        if (path != this._activeFilePath){
+			this._activeFilePath = path;
+			console.log("activeFilePath changed!");
+			this.view.processReferences();
+		}
+    }
 
 	async onload() {
 
@@ -35,11 +47,12 @@ export default class BibcitePlugin extends Plugin {
 				this.initLeaf();
 			},
 		});
-
-		//this.app.workspace.on("active-leaf-change", () => {
-		//	console.log("Active leaf changed!")
-		//	//this.initLeaf()
-		//})
+		
+		this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+			const activeFile = this.app.workspace.getActiveFile();
+			this.activeFilePath = activeFile.path;
+		}));
+	  
 
 		await this.initLeaf();
 
@@ -155,6 +168,8 @@ export default class BibcitePlugin extends Plugin {
 		const activeView = this.app.workspace.getActiveFileView();
 		const activeFile = this.app.workspace.getActiveFile();
 
+		console.log("processing references")
+
 		if (activeFile) {
 			try {
 				const fileContent = await this.app.vault.cachedRead(activeView.file);
@@ -170,6 +185,7 @@ export default class BibcitePlugin extends Plugin {
 
 			} catch (e) {
 				console.error(e);
+				return [];
 			}
 		} else {
 			return [];
