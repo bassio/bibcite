@@ -8,13 +8,16 @@ export const ReferencesViewType = 'ReferencesView';
 export class ReferencesView extends ItemView {
   plugin: BibcitePlugin;
   activeMarkdownLeaf: MarkdownView;
-  references: Set;
+  references: [];
 
-  constructor(leaf: WorkspaceLeaf, plugin: ReferenceList) {
+  constructor(leaf: WorkspaceLeaf, plugin: BibcitePlugin) {
     super(leaf);
     this.plugin = plugin;
     this.contentEl.addClass('bibcite-references');
     this.setNoContentMessage();
+    this.addAction("refresh-cw", "Refresh References", () => {
+      this.processReferences();
+    })
   }
 
   setViewContent(bib: HTMLElement) {
@@ -55,7 +58,7 @@ export class ReferencesView extends ItemView {
   }
 
   getIcon() {
-    return 'quote-glyph';
+    return 'graduation-cap';
   }
 
   processReferences = async () => {
@@ -71,7 +74,7 @@ export class ReferencesView extends ItemView {
     
     const refData = JSON.parse(await exportItems(refsArray, "json", "ENT"))
 
-    console.log(refData.flat(1));
+    console.log(refsArray);
     
     for (const item of refsArray) {
       const itemDiv = document.createElement('div');
@@ -83,13 +86,15 @@ export class ReferencesView extends ItemView {
 
       const itemAttachments = itemData['attachments'].filter(attach => attach.path != false)
 
-      if (itemAttachments.length){
-        console.log(itemAttachments[0]['open'])
-      }
-
 
       itemDiv.innerHTML += `<div class="reference-citekey">@${itemData['id']}<div>`;
-      itemDiv.innerHTML += `<div class="reference-title">${itemData['title']}</div>`;
+
+      if (itemAttachments.length){
+        const linkAttachment = itemAttachments[0]['open']
+        itemDiv.innerHTML += `<div class="reference-title"><a href='${linkAttachment}'>${itemData['title']}</a></div>`;
+      } else {
+        itemDiv.innerHTML += `<div class="reference-title">${itemData['title']}</div>`;
+      }
 
       const journal = itemData['container-title-short'] != '' ? itemData['container-title-short'] : itemData['container-title']
       const issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : ''

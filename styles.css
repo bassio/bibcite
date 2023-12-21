@@ -1,7 +1,7 @@
 
 .reference-div{
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin-top: 11px;
+    margin-bottom: 13px;
     font-size: small;
 }
 
@@ -9,11 +9,14 @@
     font-weight: bold;
 }
 
-.reference-citekey{
-    font-weight: bold;
+.reference-div .reference-title{
+    padding-top: var(--size-4-1);
 }
+
 .reference-div .reference-journal{
-    color: var(--text-accent);
-    font-size: small;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    padding-top: var(--size-4-1);
+    line-height: var(--line-height-tight);
     font-style: italic;
 }

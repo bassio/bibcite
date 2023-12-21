@@ -178,9 +178,13 @@ export async function exportItems(citeKeys, translator, libraryID) {
     const responseStr = await makeHttpRequest(options, JSON.stringify(jsonRpcData));
 	const responseJson = JSON.parse(responseStr);
     const result = responseJson.result;
-
-	return result[2];
-
+    try { 
+	    return result[2];
+    }
+    catch {
+        return "[]";
+    }
+        
 }
 
 export async function attachments(citeKey) {

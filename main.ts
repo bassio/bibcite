@@ -1,6 +1,7 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 
 import { CitationSuggest } from "CitationSuggest.ts";
+import { ReferencesView, ReferencesViewType } from './ReferencesView.ts';
 
 // Remember to rename these classes and interfaces!
 
@@ -16,9 +17,31 @@ export default class BibcitePlugin extends Plugin {
 	settings: BibcitePluginSettings;
 
 	async onload() {
+
+		console.log("Loading Bibcite plugin.")
+
 		await this.loadSettings();
 
 		this.registerEditorSuggest(new CitationSuggest(this.app, this));
+
+		this.registerView(ReferencesViewType,
+						 (leaf: WorkspaceLeaf) => new ReferencesView(leaf, this)
+						  );
+
+		this.addCommand({
+			id: 'show-references-view',
+			name: 'Show References',
+			callback: async () => {
+				this.initLeaf();
+			},
+		});
+
+		//this.app.workspace.on("active-leaf-change", () => {
+		//	console.log("Active leaf changed!")
+		//	//this.initLeaf()
+		//})
+
+		await this.initLeaf();
 
 		/*
 		// This creates an icon in the left ribbon.
@@ -86,7 +109,8 @@ export default class BibcitePlugin extends Plugin {
 	}
 
 	onunload() {
-
+		this.app.workspace.getLeavesOfType(ReferencesViewType)
+		.forEach((leaf) => leaf.detach());
 	}
 
 	async loadSettings() {
@@ -96,6 +120,61 @@ export default class BibcitePlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
+	get view() {
+		const leaves = this.app.workspace.getLeavesOfType(ReferencesViewType);
+		if (!leaves?.length) return null;
+		return leaves[0].view as ReferencesView;
+	}
+
+	async initLeaf() {
+		if (this.view) return this.revealLeaf();
+
+		await this.app.workspace.getRightLeaf(false).setViewState({
+			type: ReferencesViewType,
+		});
+
+		this.revealLeaf();
+
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (activeView) {
+			this.processReferences();
+		}
+	}
+
+	revealLeaf() {
+		const leaves = this.app.workspace.getLeavesOfType(ReferencesViewType);
+		if (!leaves?.length) return;
+		this.app.workspace.revealLeaf(leaves[0]);
+	}
+
+	processReferences = async () => {
+
+		const { settings, view } = this;
+
+		const activeView = this.app.workspace.getActiveFileView();
+		const activeFile = this.app.workspace.getActiveFile();
+
+		if (activeFile) {
+			try {
+				const fileContent = await this.app.vault.cachedRead(activeView.file);
+				const cache = this.app.metadataCache.fileCache[activeFile.path];
+
+				const re = /\[(@[a-zA-Z0-9_-]+[ ]*;?[ ]*)+\]/g
+
+				const matches = fileContent.match(re).map(item => item.slice(1, -1).split(";").map( i => i.trim().replace("@", "") ));
+
+				const matches_unique = new Set(matches.flat(1))
+
+				return  [...matches_unique];
+
+			} catch (e) {
+				console.error(e);
+			}
+		} else {
+			return [];
+		};
+	};
 }
 
 class SampleModal extends Modal {
@@ -115,9 +194,9 @@ class SampleModal extends Modal {
 }
 
 class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: BibcitePlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: BibcitePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
