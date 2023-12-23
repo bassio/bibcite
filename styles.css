@@ -5,6 +5,10 @@
     font-size: small;
 }
 
+.container-div{
+    text-align: center;
+}
+
 .reference-div .reference-citekey{
     font-weight: bold;
 }

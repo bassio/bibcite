@@ -1,9 +1,15 @@
 import { ItemView, MarkdownView, WorkspaceLeaf, setIcon } from 'obsidian';
 
 import BibcitePlugin from './main';
-import { exportItems, attachments } from "ZoteroFunctions.ts";
+import { exportItems, attachments, collectionCitekeys } from "ZoteroFunctions.ts";
 
 export const ReferencesViewType = 'ReferencesView';
+
+interface ReferencesViewPersistedState {
+  zotero_collection: string;
+  libraryName: string;
+  citations: string[];
+}
 
 export class ReferencesView extends ItemView {
   plugin: BibcitePlugin;
@@ -14,36 +20,48 @@ export class ReferencesView extends ItemView {
     super(leaf);
     this.plugin = plugin;
     this.contentEl.addClass('bibcite-references');
-    this.setNoContentMessage();
+    this.setEmptyView();
     this.addAction("refresh-cw", "Refresh References", () => {
-      this.processReferences();
+      this.renderReferences();
     })
   }
 
   setViewContent(bib: HTMLElement) {
     this.contentEl.empty();
-    this.button = this.contentEl.createEl("button", { text: "Refresh Bibiography" });
+    const containerDiv = this.contentEl.createDiv({cls:"container-div" });
+    this.button = containerDiv.createEl("button", { text: "Refresh Bibliography" });
     this.button.onclick = (e) => {
-      this.processReferences();
+      this.renderReferences();
     }
     if (!bib) {
-      this.setNoContentMessage();
+      this.setEmptyView();
     } else {
       this.contentEl.append(bib);
     }
   }
 
-  setNoContentMessage() {
-    this.setMessage('No citations found in the current document.');
+  setEmptyView() {
+    this.contentEl.empty();
+    const containerDiv = this.contentEl.createDiv({cls:"container-div" });
+    this.button = containerDiv.createEl("button", { text: "Refresh Bibliography" });
+    this.button.onclick = (e) => {
+      this.renderReferences();
+    }
+    containerDiv.createDiv({
+      cls: 'pane-empty',
+      text: 'No citations found in the current document.',
+    });
   }
+
 
   setMessage(message: string) {
     this.contentEl.empty();
-    this.button = this.contentEl.createEl("button", { text: "Refresh Bibiography" });
+    const containerDiv = this.contentEl.createDiv({cls:"container-div" });
+    this.button = containerDiv.createEl("button", { text: "Refresh Bibliography" });
     this.button.onclick = (e) => {
-      this.processReferences();
+      this.renderReferences();
     }
-    this.contentEl.createDiv({
+    containerDiv.createDiv({
       cls: 'pane-empty',
       text: message,
     });
@@ -63,20 +81,62 @@ export class ReferencesView extends ItemView {
 
   processReferences = async () => {
 
-    const refs = await this.plugin.processReferences();
+		const { settings, view } = this;
 
-    this.setViewContent(await this.renderReferences(refs))
+		const activeView = this.plugin.app.workspace.getActiveFileView();
+		const activeFile = this.plugin.app.workspace.getActiveFile();
 
-  };
+		if (activeFile) {
+			try {
+				const fileContent = await this.plugin.app.vault.cachedRead(activeView.file);
+        const cache = this.plugin.app.metadataCache.getFileCache(activeFile);
+		    const frontMatter = cache.frontmatter;
 
-  async renderReferences(refsArray) {
-    const containerDiv = document.createElement('div')
+        if (!frontMatter){
+          return {'library': null, 'citations': []}
+        }
+        if (!Object.hasOwn(frontMatter, 'zotero_collection')){
+          return {'library': null, 'citations': []}
+        }
+
+        const libraryName = frontMatter.zotero_collection.split("/")[0];
+
+        const citekeys = await collectionCitekeys(frontMatter.zotero_collection);
+        
+				const re = /\[(@[a-zA-Z0-9_-]+[ ]*;?[ ]*)+\]/g
+
+				let matches = fileContent.match(re).map(item => item.slice(1, -1).split(";").map( i => i.trim().replace("@", "") ));
+        
+        matches = matches.flat(1).filter((item) => citekeys.includes(item));
+
+				const matches_unique = new Set(matches)
+
+				return  {'library': libraryName, 'citations': [...matches_unique]};
+
+			} catch (e) {
+				console.error(e);
+				return {'library': null, 'citations': []};
+			}
+		} else {
+			return {'library': null, 'citations': []};
+		};
+	};
+
+  async renderReferences() {
+
+    const refs = await this.processReferences();
+
+    const containerDiv = document.createElement('div');
+    containerDiv.classList.add('references-div');
     
-    const refData = JSON.parse(await exportItems(refsArray, "json", "ENT"))
+    const refData = JSON.parse(await exportItems(refs.citations, "json", refs.library))
+        
+    if (refs.citations.length == 0){
+      this.setEmptyView();
+      return
+    }
 
-    console.log(refsArray);
-    
-    for (const item of refsArray) {
+    for (const item of refs.citations) {
       const itemDiv = document.createElement('div');
       itemDiv.classList.add('reference-div');
 
@@ -103,9 +163,9 @@ export class ReferencesView extends ItemView {
 
       containerDiv.appendChild(itemDiv);
 
-  }
+    }
 
-    return containerDiv;
+  this.setViewContent(containerDiv);
 
   };
 

@@ -23,8 +23,8 @@ export default class BibcitePlugin extends Plugin {
     set activeFilePath(path) {
         if (path != this._activeFilePath){
 			this._activeFilePath = path;
-			console.log("activeFilePath changed!");
-			this.view.processReferences();
+			console.log("activeFilePath changed!");	
+			this.view?.renderReferences();
 		}
     }
 
@@ -151,7 +151,7 @@ export default class BibcitePlugin extends Plugin {
 
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (activeView) {
-			this.processReferences();
+			this.view?.renderReferences();
 		}
 	}
 
@@ -161,36 +161,6 @@ export default class BibcitePlugin extends Plugin {
 		this.app.workspace.revealLeaf(leaves[0]);
 	}
 
-	processReferences = async () => {
-
-		const { settings, view } = this;
-
-		const activeView = this.app.workspace.getActiveFileView();
-		const activeFile = this.app.workspace.getActiveFile();
-
-		console.log("processing references")
-
-		if (activeFile) {
-			try {
-				const fileContent = await this.app.vault.cachedRead(activeView.file);
-				const cache = this.app.metadataCache.fileCache[activeFile.path];
-
-				const re = /\[(@[a-zA-Z0-9_-]+[ ]*;?[ ]*)+\]/g
-
-				const matches = fileContent.match(re).map(item => item.slice(1, -1).split(";").map( i => i.trim().replace("@", "") ));
-
-				const matches_unique = new Set(matches.flat(1))
-
-				return  [...matches_unique];
-
-			} catch (e) {
-				console.error(e);
-				return [];
-			}
-		} else {
-			return [];
-		};
-	};
 }
 
 class SampleModal extends Modal {
