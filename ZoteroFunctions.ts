@@ -1,30 +1,29 @@
-const http = require('http');
+import {requestUrl} from 'obsidian';
 
-function makeHttpRequest(options, data) {
-    return new Promise((resolve, reject) => {
-        const req = http.request(options, (res) => {
-            let responseData = '';
+const defaultHeaders = {
+    'Content-Type': 'application/json',
+    'User-Agent': 'obsidian/zotero',
+    'Accept': 'application/json',
+    'Connection': 'keep-alive',
+};
+  
+const baseOptions = {
+    url: 'http://localhost:23119/better-bibtex/json-rpc',
+    hostname: 'localhost',
+    port: 23119,
+    path: '/better-bibtex/json-rpc',
+    method: 'POST',
+    contentType: 'application/json',
+    headers: defaultHeaders
+};
 
-            res.on('data', (chunk) => {
-                responseData += chunk;
-            });
-
-            res.on('end', () => {
-                resolve(responseData);
-            });
-        });
-
-        req.on('error', (error) => {
-            reject(error);
-        });
-
-        if (data) {
-            req.write(data);
-        }
-
-        req.end();
-    });
+async function makeHttpRequest(options, data) {
+    const body = {'body': data}
+    const requestOptions = Object.assign({ ...options }, body)
+    const req = await requestUrl(requestOptions);
+    return req.text;
 }
+
 
 export async function locateCollection(collectionPath) {
     const jsonRpcData = {
@@ -33,18 +32,7 @@ export async function locateCollection(collectionPath) {
         params: [true]
     };
 
-    const options = {
-        hostname: 'localhost',
-        port: 23119,
-        path: '/better-bibtex/json-rpc',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-			'Content-Length': JSON.stringify(jsonRpcData).length
-        },
-    };
-
-    const responseStr = await makeHttpRequest(options, JSON.stringify(jsonRpcData));
+    const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 	const responseJson = JSON.parse(responseStr);
     const result = responseJson.result;
 
@@ -112,6 +100,7 @@ export async function exportCollection(collectionId, libraryId, bibFormat = 'bet
     const url = `http://127.0.0.1:23119/better-bibtex/collection?/${libraryId}/${collectionId}.${bibFormat}`;
 
 	const options = {
+        url: url,
 		hostname: 'localhost',
 		port: 23119,
 		path: url_path,
@@ -121,7 +110,7 @@ export async function exportCollection(collectionId, libraryId, bibFormat = 'bet
 			},
 	};
 
-    const responseStr = await makeHttpRequest(options)
+    const responseStr = await makeHttpRequest(options, '')
 
 	const responseJson = JSON.parse(responseStr);
 
@@ -137,18 +126,7 @@ export async function bibliography(citeKeys, format) {
         params: [citeKeys, format]
     };
 
-    const options = {
-        hostname: 'localhost',
-        port: 23119,
-        path: '/better-bibtex/json-rpc',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-			'Content-Length': JSON.stringify(jsonRpcData).length
-        },
-    };
-
-    const responseStr = await makeHttpRequest(options, JSON.stringify(jsonRpcData));
+    const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 	const responseJson = JSON.parse(responseStr);
     const result = responseJson.result;
 
@@ -164,18 +142,7 @@ export async function exportItems(citeKeys, translator, libraryID) {
         params: [citeKeys, translator, libraryID]
     };
 
-    const options = {
-        hostname: 'localhost',
-        port: 23119,
-        path: '/better-bibtex/json-rpc',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-			'Content-Length': JSON.stringify(jsonRpcData).length
-        },
-    };
-
-    const responseStr = await makeHttpRequest(options, JSON.stringify(jsonRpcData));
+    const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 	const responseJson = JSON.parse(responseStr);
     const result = responseJson.result;
     try { 
@@ -195,18 +162,7 @@ export async function attachments(citeKey) {
         params: [citeKey]
     };
 
-    const options = {
-        hostname: 'localhost',
-        port: 23119,
-        path: '/better-bibtex/json-rpc',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-			'Content-Length': JSON.stringify(jsonRpcData).length
-        },
-    };
-
-    const responseStr = await makeHttpRequest(options, JSON.stringify(jsonRpcData));
+    const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 
 	const responseJson = JSON.parse(responseStr);
 
