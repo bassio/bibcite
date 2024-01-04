@@ -1,9 +1,11 @@
-import { ItemView, MarkdownView, WorkspaceLeaf, setIcon } from 'obsidian';
+import { ItemView, MarkdownView, WorkspaceLeaf, Modal, normalizePath, setIcon } from 'obsidian';
 
 import BibcitePlugin from './main';
 import { exportItems, attachments, collectionCitekeys } from "ZoteroFunctions.ts";
 
 export const ReferencesViewType = 'ReferencesView';
+
+const fs = require('fs');
 
 interface ReferencesViewPersistedState {
   zotero_collection: string;
@@ -40,6 +42,27 @@ export class ReferencesView extends ItemView {
     }
   }
 
+  setErrorView(error) {
+    this.contentEl.empty();
+    const containerDiv = this.contentEl.createDiv({cls:"container-div" });
+    this.button = containerDiv.createEl("button", { text: "Refresh Bibliography" });
+    this.button.onclick = (e) => {
+      this.renderReferences();
+    }
+
+    if (error.message == 'net::ERR_CONNECTION_REFUSED'){
+      containerDiv.createDiv({
+        cls: 'pane-empty',
+        text: 'Unable to connect to Zotero. Is Zotero running?',
+      });
+    } else {
+      containerDiv.createDiv({
+        cls: 'pane-empty',
+        text: error.message,
+      });
+    }
+  }
+
   setEmptyView() {
     this.contentEl.empty();
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
@@ -49,21 +72,7 @@ export class ReferencesView extends ItemView {
     }
     containerDiv.createDiv({
       cls: 'pane-empty',
-      text: 'No citations found in the current document.',
-    });
-  }
-
-
-  setMessage(message: string) {
-    this.contentEl.empty();
-    const containerDiv = this.contentEl.createDiv({cls:"container-div" });
-    this.button = containerDiv.createEl("button", { text: "Refresh Bibliography" });
-    this.button.onclick = (e) => {
-      this.renderReferences();
-    }
-    containerDiv.createDiv({
-      cls: 'pane-empty',
-      text: message,
+      text: 'No set bibliography and/or citations found for the current document.',
     });
   }
 
@@ -115,7 +124,7 @@ export class ReferencesView extends ItemView {
 
 			} catch (e) {
 				console.error(e);
-				return {'library': null, 'citations': []};
+				return {'library': null, 'citations': [], 'error': e};
 			}
 		} else {
 			return {'library': null, 'citations': []};
@@ -125,37 +134,30 @@ export class ReferencesView extends ItemView {
   async renderReferences() {
 
     const refs = await this.processReferences();
-
-    const containerDiv = document.createElement('div');
-    containerDiv.classList.add('references-div');
     
-    const refData = JSON.parse(await exportItems(refs.citations, "json", refs.library))
-        
     if (refs.citations.length == 0){
-      this.setEmptyView();
+      if (refs.error) {
+        this.setErrorView(refs.error);
+      } else {
+        this.setEmptyView();
+      };
       return
     }
 
+    const containerDiv = document.createElement('div');
+    containerDiv.classList.add('references-div');
+
+    const refData = JSON.parse(await exportItems(refs.citations, "json", refs.library));
+    
     for (const item of refs.citations) {
       const itemDiv = document.createElement('div');
       itemDiv.classList.add('reference-div');
 
       const itemData = refData.flat(1).filter(r => r['id'] == item)[0]
 
-      itemData['attachments'] = await attachments(item)
-
-      const itemAttachments = itemData['attachments'].filter(attach => attach.path != false)
-
-
-      itemDiv.innerHTML += `<div class="reference-citekey">@${itemData['id']}<div>`;
-
-      if (itemAttachments.length){
-        const linkAttachment = itemAttachments[0]['open']
-        itemDiv.innerHTML += `<div class="reference-title"><a href='${linkAttachment}'>${itemData['title']}</a></div>`;
-      } else {
-        itemDiv.innerHTML += `<div class="reference-title">${itemData['title']}</div>`;
-      }
-
+      itemDiv.innerHTML += `<div class="reference-citekey" data-citekey="${itemData['id']}">@${itemData['id']}<div>`;
+      itemDiv.innerHTML += `<div class="reference-title"><a data-citekey="${itemData['id']}" href='#0'>${itemData['title']}</a></div>`;
+      
       const journal = itemData['container-title-short'] != '' ? itemData['container-title-short'] : itemData['container-title']
       const issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : ''
 
@@ -167,6 +169,97 @@ export class ReferencesView extends ItemView {
 
   this.setViewContent(containerDiv);
 
+  this.renderAttachments(refs);
+
   };
 
+
+  async renderAttachments(refs) {
+
+    const containerDiv = document.createElement('div');
+    containerDiv.classList.add('references-div');
+    
+    for (const item of refs.citations) {
+      
+      const allAttachments = await attachments(item)
+      
+      console.log(allAttachments);
+
+      const itemAttachments = allAttachments.filter(attach => attach.path != false)
+
+      if (itemAttachments.length){
+        const linkAttachment = itemAttachments[0]['open'];
+        const linkAnnotations = itemAttachments[0]['annotations'];
+        const citeKeyDomElement = this.contentEl.querySelector(`.reference-div .reference-citekey[data-citekey='${item}']`);
+        const linkDomElement = this.contentEl.querySelector(`.reference-div .reference-title a[data-citekey='${item}']`);
+
+        linkDomElement?.setAttribute('href', linkAttachment);
+        citeKeyDomElement.onclick = (e) => {
+          new AnnotationsModal(this.app, item, linkAnnotations).open();
+        };
+        
+      } else {
+        
+      }
+
+    }
+
+  };
+
+}
+
+
+export class AnnotationsModal extends Modal {
+  private _citekey: string;
+  private _annotations: Object;
+
+  constructor(app: App, private citekey: string, private annotations: Object) {
+    super(app);
+    this._citekey = citekey;
+    this._annotations = annotations;
+  }
+
+  onOpen() {
+    this.renderContent();
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+
+  onSelectReference = (citekey: string) => {
+    this.contentEl.empty();
+    this.renderContent();
+  };
+
+  private renderContent() {
+    const citekey = this._citekey;
+    const fragment = document.createDocumentFragment();
+    fragment.createEl("h2", { text: `Annotations of @${citekey}` });
+
+    for (const annotation of this._annotations) {
+      this.renderAnnotation(fragment, annotation);
+    }
+
+    this.contentEl.appendChild(fragment);
+  }
+
+  private renderEmptyContent(fragment: DocumentFragment) {
+    fragment.createEl("p", "There are no annotations associated with this reference.");
+  }
+
+  private renderAnnotation(fragment: DocumentFragment, annotation: Object){
+    const annotationDiv = fragment.createDiv({cls: ["annotation-div", `annotation-${annotation.annotationType}`] });
+
+    if (annotation.annotationType == 'highlight'){
+      const annotationSpan = annotationDiv.createEl("span", {text: annotation.annotationText});
+      annotationSpan.style = `background-color: ${annotation.annotationColor}`;
+    }
+    else if (annotation.annotationType == 'image'){
+      const annotationImage = annotationDiv.createEl("img");
+      const pth = annotation.annotationImagePath;
+      const _img = "data:image/png;base64," + fs.readFileSync(pth).toString('base64');
+      annotationImage.src = _img;
+    }
+  }
 }

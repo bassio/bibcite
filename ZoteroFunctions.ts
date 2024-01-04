@@ -20,8 +20,14 @@ const baseOptions = {
 async function makeHttpRequest(options, data) {
     const body = {'body': data}
     const requestOptions = Object.assign({ ...options }, body)
-    const req = await requestUrl(requestOptions);
-    return req.text;
+
+    try {
+        const req = await requestUrl(requestOptions);
+        return req.text;
+    } catch (error) {
+        throw error;
+    }
+
 }
 
 
@@ -130,7 +136,7 @@ export async function bibliography(citeKeys, format) {
 	const responseJson = JSON.parse(responseStr);
     const result = responseJson.result;
 
-	return result[2];
+	return result;
 
 }
 
@@ -142,11 +148,11 @@ export async function exportItems(citeKeys, translator, libraryID) {
         params: [citeKeys, translator, libraryID]
     };
 
-    const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
-	const responseJson = JSON.parse(responseStr);
-    const result = responseJson.result;
     try { 
-	    return result[2];
+        const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
+        const responseJson = JSON.parse(responseStr);
+        const result = responseJson.result;
+	    return result;
     }
     catch {
         return "[]";
@@ -175,9 +181,8 @@ export async function exportCollectionPath(collectionPath, bibFormat = 'betterbi
         const coll = await locateCollection(collectionPath)
         const exported_collection = await exportCollection(coll.collectionId, coll.libraryId, bibFormat);
 		return exported_collection;
-
 	} catch (error) {
-        console.error('Error:', error);
+        throw error;
     }
 }
 

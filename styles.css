@@ -9,12 +9,29 @@
     text-align: center;
 }
 
+.container-div .references-header{
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-size: var(--font-adaptive-smallest);
+    white-space: nowrap;
+    color: var(--text-normal);
+    padding-left: var(--size-4-2);
+}
+
 .reference-div .reference-citekey{
     font-weight: bold;
+    cursor: pointer;
 }
 
 .reference-div .reference-title{
     padding-top: var(--size-4-1);
+}
+
+.reference-div .reference-title a[href='#0']{
+    color: var(--text-normal);
+    cursor: inherit;
+    text-decoration: inherit;
 }
 
 .reference-div .reference-journal{
@@ -23,4 +40,16 @@
     padding-top: var(--size-4-1);
     line-height: var(--line-height-tight);
     font-style: italic;
+}
+
+.reference-div{
+    margin-top: 11px;
+    margin-bottom: 13px;
+    font-size: small;
+}
+
+.modal-content .annotation-highlight {
+    margin-top: 11px;
+    margin-bottom: 13px;
+    font-size: small;
 }
