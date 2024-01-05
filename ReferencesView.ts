@@ -1,4 +1,4 @@
-import { ItemView, MarkdownView, WorkspaceLeaf, Modal, normalizePath, setIcon } from 'obsidian';
+import { ItemView, MarkdownView, WorkspaceLeaf, Modal, Notice, setIcon } from 'obsidian';
 
 import BibcitePlugin from './main';
 import { exportItems, attachments, collectionCitekeys } from "ZoteroFunctions.ts";
@@ -31,7 +31,10 @@ export class ReferencesView extends ItemView {
   setViewContent(bib: HTMLElement) {
     this.contentEl.empty();
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
-    this.button = containerDiv.createEl("button", { text: "Refresh Bibliography" });
+    const header = containerDiv.createDiv({cls:"references-header"});
+    const headerText = header.createEl("span", { text: "References", cls: "references-header-text" });
+    this.button = header.createEl("button", { text: "Refresh Bibliography", cls: "refresh-button" });
+    setIcon(this.button, "refresh-cw");
     this.button.onclick = (e) => {
       this.renderReferences();
     }
@@ -45,7 +48,10 @@ export class ReferencesView extends ItemView {
   setErrorView(error) {
     this.contentEl.empty();
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
-    this.button = containerDiv.createEl("button", { text: "Refresh Bibliography" });
+    const header = containerDiv.createDiv({cls:"references-header"});
+    const headerText = header.createEl("span", { text: "References", cls: "references-header-text" });
+    this.button = header.createEl("button", { text: "Refresh Bibliography" });
+    setIcon(this.button, "refresh-cw");
     this.button.onclick = (e) => {
       this.renderReferences();
     }
@@ -66,7 +72,10 @@ export class ReferencesView extends ItemView {
   setEmptyView() {
     this.contentEl.empty();
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
-    this.button = containerDiv.createEl("button", { text: "Refresh Bibliography" });
+    const header = containerDiv.createDiv({cls:"references-header"});
+    const headerText = header.createEl("span", { text: "References", cls: "references-header-text" });
+    this.button = header.createEl("button", { text: "Refresh Bibliography" });
+    setIcon(this.button, "refresh-cw");
     this.button.onclick = (e) => {
       this.renderReferences();
     }
@@ -155,7 +164,7 @@ export class ReferencesView extends ItemView {
 
       const itemData = refData.flat(1).filter(r => r['id'] == item)[0]
 
-      itemDiv.innerHTML += `<div class="reference-citekey" data-citekey="${itemData['id']}">@${itemData['id']}<div>`;
+      itemDiv.innerHTML += `<div class="reference-citekey" data-citekey="${itemData['id']}">@${itemData['id']}</div>`;
       itemDiv.innerHTML += `<div class="reference-title"><a data-citekey="${itemData['id']}" href='#0'>${itemData['title']}</a></div>`;
       
       const journal = itemData['container-title-short'] != '' ? itemData['container-title-short'] : itemData['container-title']
@@ -190,13 +199,24 @@ export class ReferencesView extends ItemView {
       if (itemAttachments.length){
         const linkAttachment = itemAttachments[0]['open'];
         const linkAnnotations = itemAttachments[0]['annotations'];
-        const citeKeyDomElement = this.contentEl.querySelector(`.reference-div .reference-citekey[data-citekey='${item}']`);
-        const linkDomElement = this.contentEl.querySelector(`.reference-div .reference-title a[data-citekey='${item}']`);
 
+        const linkDomElement = this.contentEl.querySelector(`.reference-div .reference-title a[data-citekey='${item}']`);
         linkDomElement?.setAttribute('href', linkAttachment);
-        citeKeyDomElement.onclick = (e) => {
-          new AnnotationsModal(this.app, item, linkAnnotations).open();
-        };
+
+        if (linkAnnotations.length){
+
+          const citeKeyDomElement = this.contentEl.querySelector(`.reference-div .reference-citekey[data-citekey='${item}']`);
+
+          let annotationsIcon = document.createElement("span");
+          annotationsIcon.addClass("annotations-icon");
+          setIcon(annotationsIcon, "book-open-text");
+          annotationsIcon.onclick = (e) => {
+            new AnnotationsModal(this.app, item, linkAttachment, linkAnnotations).open();
+          };
+          
+          citeKeyDomElement?.appendChild(annotationsIcon);
+  
+        }
         
       } else {
         
@@ -211,11 +231,13 @@ export class ReferencesView extends ItemView {
 
 export class AnnotationsModal extends Modal {
   private _citekey: string;
+  private _parentUri: string;
   private _annotations: Object;
 
-  constructor(app: App, private citekey: string, private annotations: Object) {
+  constructor(app: App, private citekey: string, private parentUri: string, private annotations: Object) {
     super(app);
     this._citekey = citekey;
+    this._parentUri = parentUri;
     this._annotations = annotations;
   }
 
@@ -253,13 +275,33 @@ export class AnnotationsModal extends Modal {
 
     if (annotation.annotationType == 'highlight'){
       const annotationSpan = annotationDiv.createEl("span", {text: annotation.annotationText});
+      annotationSpan.title = annotation.annotationComment //tooltip
       annotationSpan.style = `background-color: ${annotation.annotationColor}`;
+      const annotationUri = this._parentUri + `?annotation=${annotation.key}`
+      let linkButton = annotationDiv.createEl("a", {cls: "annotation-link-icon", title: "Open in Zotero"});
+      linkButton.href = annotationUri;
+      setIcon(linkButton, "external-link");
+      let copyButton = annotationDiv.createEl("a", {cls: "annotation-copy-icon", title: "Copy to clipboard"});
+      setIcon(copyButton, "clipboard-copy");
+      copyButton.onclick = (e) => {
+        navigator.clipboard.writeText(`${annotation.annotationText}[@${this._citekey}]\n[Link](${annotationUri})\n`);
+        new Notice('Annotation copied to clipboard!', 1000);
+        this.close();
+      }
+
     }
     else if (annotation.annotationType == 'image'){
-      const annotationImage = annotationDiv.createEl("img");
+      const annotationImage = annotationDiv.createEl("img", {cls: "annotation-img"});
       const pth = annotation.annotationImagePath;
       const _img = "data:image/png;base64," + fs.readFileSync(pth).toString('base64');
       annotationImage.src = _img;
+      const annotationSpan = annotationDiv.createEl("span", {text: annotation.annotationComment});
+      let linkButton = annotationSpan.createEl("a", {cls: "annotation-link-icon", title: "Open in Zotero"});
+      const annotationUri = this._parentUri + `?annotation=${annotation.key}`
+      linkButton.href = annotationUri;
+      setIcon(linkButton, "external-link");
+      
+
     }
   }
 }

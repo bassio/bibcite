@@ -7,8 +7,6 @@ import {
 	EditorSuggestTriggerInfo,
 	MarkdownView,
 	TFile,
-	request,
-	requestUrl
 } from 'obsidian';
 
 import {collectionCitekeysTitles} from 'ZoteroFunctions'

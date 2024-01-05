@@ -6,22 +6,46 @@
 }
 
 .container-div{
-    text-align: center;
 }
 
 .container-div .references-header{
+    white-space: nowrap;
+    display: table;
+    width: 100%;
+}
+
+.container-div .references-header .references-header-text{
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: .05em;
-    font-size: var(--font-adaptive-smallest);
+    font-size: var(--font-adaptive-small);
+    height: 100%;
+    text-align: left;
     white-space: nowrap;
-    color: var(--text-normal);
-    padding-left: var(--size-4-2);
+    display: table-cell;
+    vertical-align: middle;
+}
+
+
+.container-div .references-header .refresh-button{
+    vertical-align: middle;
+    float: right;
+    --icon-size: var(--icon-xs);
+}
+
+.container-div .pane-empty {
+    margin-top: 30px;
 }
 
 .reference-div .reference-citekey{
     font-weight: bold;
+}
+
+.reference-div  .annotations-icon{
     cursor: pointer;
+    --icon-size: var(--icon-xs);
+    padding-left: var(--icon-xs-stroke-width);
+    vertical-align: middle;
 }
 
 .reference-div .reference-title{
@@ -48,8 +72,30 @@
     font-size: small;
 }
 
+.modal-content .annotation-div {
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
 .modal-content .annotation-highlight {
-    margin-top: 11px;
-    margin-bottom: 13px;
-    font-size: small;
+    font-size: var(--font-ui-small);
+}
+
+.modal-content .annotation-link-icon,
+.modal-content .annotation-copy-icon  {
+    color: var(--text-normal);
+    padding-left: var(--icon-xs-stroke-width);
+    padding-right: var(--icon-xs-stroke-width);
+    vertical-align: middle;
+}
+
+.modal-content .annotation-image {
+    text-align: center;
+    font-size: var(--font-ui-small);
+}
+
+.modal-content .annotation-image img.annotation-img {
+    display: block;
+    margin: auto;
+    width: 80%;
 }
