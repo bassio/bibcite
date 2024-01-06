@@ -145,7 +145,7 @@ export class ReferencesView extends ItemView {
     const refs = await this.processReferences();
     
     if (refs.citations.length == 0){
-      if (refs.error) {
+      if ('error' in refs) {
         this.setErrorView(refs.error);
       } else {
         this.setEmptyView();

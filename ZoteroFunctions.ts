@@ -121,57 +121,80 @@ export async function exportCollection(collectionId, libraryId, bibFormat = 'bet
 			},
 	};
 
-    const responseStr = await makeHttpRequest(options, '')
+    try { 
+        
+        const responseStr = await makeHttpRequest(options, '')
 
-	const responseJson = JSON.parse(responseStr);
+        const responseJson = JSON.parse(responseStr);
 
-	return responseJson;
+        return responseJson;
+
+    }
+    catch (error) {
+        throw error;
+    }
+
 
 }
 
 export async function bibliography(citeKeys, format) {
+    try { 
+        
+        const jsonRpcData = {
+            jsonrpc: "2.0",
+            method: "item.bibliography",
+            params: [citeKeys, format]
+        };
 
-    const jsonRpcData = {
-        jsonrpc: "2.0",
-        method: "item.bibliography",
-        params: [citeKeys, format]
-    };
+        const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 
-    const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
+        return result;
 
-	return result;
+    }
+    catch (error) {
+        throw error;
+    }
 
 }
 
 export async function exportItems(citeKeys, translator, libraryID) {
 
-    const jsonRpcData = {
-        jsonrpc: "2.0",
-        method: "item.export",
-        params: [citeKeys, translator, libraryID]
-    };
-
-    const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
     try { 
-	    return result;
+        
+        const jsonRpcData = {
+            jsonrpc: "2.0",
+            method: "item.export",
+            params: [citeKeys, translator, libraryID]
+        };
+    
+        const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
+        
+        return result;
+
     }
-    catch {
-        return "[]";
+    catch (error) {
+        console.error('Error:', error);
+        throw error;
     }
         
 }
 
 export async function attachments(citeKey) {
+    try {
 
-    const jsonRpcData = {
-        jsonrpc: "2.0",
-        method: "item.attachments",
-        params: [citeKey]
-    };
+        const jsonRpcData = {
+            jsonrpc: "2.0",
+            method: "item.attachments",
+            params: [citeKey]
+        };
 
-    const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
+        const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 
-	return result;
+        return result;
+	
+    } catch (error) {
+        throw error;
+    }
 
 }
 
@@ -180,19 +203,26 @@ export async function exportCollectionPath(collectionPath, bibFormat = 'betterbi
         const coll = await locateCollection(collectionPath)
         const exported_collection = await exportCollection(coll.collectionId, coll.libraryId, bibFormat);
 		return exported_collection;
-
 	} catch (error) {
-        console.error('Error:', error);
+        throw error;
     }
 }
 
 export async function collectionCitekeys(collectionPath) {
-    const resultJson = await exportCollectionPath(collectionPath, "json");
-    return resultJson.map(item => item.id);
+    try {
+        const resultJson = await exportCollectionPath(collectionPath, "json");
+        return resultJson.map(item => item.id);
+    } catch (error) {
+        throw error;
+    }
 }
 
 export async function collectionCitekeysTitles(collectionPath) {
-    const resultJson = await exportCollectionPath(collectionPath, "json");
-    const result_keys_title = resultJson.map(item => {return {'id': item.id, 'title': item.title} });
-	return result_keys_title;
+    try {
+        const resultJson = await exportCollectionPath(collectionPath, "json");
+        const result_keys_title = resultJson.map(item => {return {'id': item.id, 'title': item.title} });
+	    return result_keys_title;
+    } catch (error) {
+        throw error;
+    } 
 }
