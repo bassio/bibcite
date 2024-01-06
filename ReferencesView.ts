@@ -209,6 +209,7 @@ export class ReferencesView extends ItemView {
 
           let annotationsIcon = document.createElement("span");
           annotationsIcon.addClass("annotations-icon");
+          annotationsIcon.setAttribute("title", "Review Annotations");
           setIcon(annotationsIcon, "book-open-text");
           annotationsIcon.onclick = (e) => {
             new AnnotationsModal(this.app, item, linkAttachment, linkAnnotations).open();

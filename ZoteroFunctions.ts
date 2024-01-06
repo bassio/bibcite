@@ -17,17 +17,25 @@ const baseOptions = {
     headers: defaultHeaders
 };
 
+async function makeJsonRpcHttpRequest(options, data) {
+    const body = {'body': data}
+    const requestOptions = Object.assign({ ...options }, body)
+    const req = await requestUrl(requestOptions);
+    if (req.json.result[0] == '200' && req.json.result[1] == 'text/plain'){
+        const resultStr = req.json.result[2];
+	    const resultJson = JSON.parse(resultStr);
+        return resultJson
+    } else if ('jsonrpc' in req.json && req.status == 200){
+        const resultJson = req.json.result;
+        return resultJson
+    };
+}
+
 async function makeHttpRequest(options, data) {
     const body = {'body': data}
     const requestOptions = Object.assign({ ...options }, body)
-
-    try {
-        const req = await requestUrl(requestOptions);
-        return req.text;
-    } catch (error) {
-        throw error;
-    }
-
+    const req = await requestUrl(requestOptions);
+    return req.text;
 }
 
 
@@ -38,10 +46,7 @@ export async function locateCollection(collectionPath) {
         params: [true]
     };
 
-    const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
-	const responseJson = JSON.parse(responseStr);
-    const result = responseJson.result;
-
+    const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 
     const plist = collectionPath.split("/");
     const lib = plist[0];
@@ -128,13 +133,11 @@ export async function bibliography(citeKeys, format) {
 
     const jsonRpcData = {
         jsonrpc: "2.0",
-        method: "item.export",
+        method: "item.bibliography",
         params: [citeKeys, format]
     };
 
-    const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
-	const responseJson = JSON.parse(responseStr);
-    const result = responseJson.result;
+    const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 
 	return result;
 
@@ -148,10 +151,8 @@ export async function exportItems(citeKeys, translator, libraryID) {
         params: [citeKeys, translator, libraryID]
     };
 
+    const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
     try { 
-        const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
-        const responseJson = JSON.parse(responseStr);
-        const result = responseJson.result;
 	    return result;
     }
     catch {
@@ -168,11 +169,9 @@ export async function attachments(citeKey) {
         params: [citeKey]
     };
 
-    const responseStr = await makeHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
+    const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
 
-	const responseJson = JSON.parse(responseStr);
-
-	return responseJson.result;
+	return result;
 
 }
 
@@ -181,8 +180,9 @@ export async function exportCollectionPath(collectionPath, bibFormat = 'betterbi
         const coll = await locateCollection(collectionPath)
         const exported_collection = await exportCollection(coll.collectionId, coll.libraryId, bibFormat);
 		return exported_collection;
+
 	} catch (error) {
-        throw error;
+        console.error('Error:', error);
     }
 }
 
