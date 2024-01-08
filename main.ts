@@ -3,7 +3,6 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 import { CitationSuggest } from "CitationSuggest.ts";
 import { ReferencesView, ReferencesViewType } from './ReferencesView.ts';
 
-// Remember to rename these classes and interfaces!
 
 interface BibcitePluginSettings {
 	mySetting: string;

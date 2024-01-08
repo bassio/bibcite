@@ -50,7 +50,7 @@ export class ReferencesView extends ItemView {
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
     const header = containerDiv.createDiv({cls:"references-header"});
     const headerText = header.createEl("span", { text: "References", cls: "references-header-text" });
-    this.button = header.createEl("button", { text: "Refresh Bibliography" });
+    this.button = header.createEl("button", { text: "Refresh Bibliography", cls: "refresh-button" });
     setIcon(this.button, "refresh-cw");
     this.button.onclick = (e) => {
       this.renderReferences();
@@ -74,7 +74,7 @@ export class ReferencesView extends ItemView {
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
     const header = containerDiv.createDiv({cls:"references-header"});
     const headerText = header.createEl("span", { text: "References", cls: "references-header-text" });
-    this.button = header.createEl("button", { text: "Refresh Bibliography" });
+    this.button = header.createEl("button", { text: "Refresh Bibliography", cls: "refresh-button" });
     setIcon(this.button, "refresh-cw");
     this.button.onclick = (e) => {
       this.renderReferences();
