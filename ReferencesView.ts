@@ -156,13 +156,13 @@ export class ReferencesView extends ItemView {
     const containerDiv = document.createElement('div');
     containerDiv.classList.add('references-div');
 
-    const refData = JSON.parse(await exportItems(refs.citations, "json", refs.library));
+    const refData = await exportItems(refs.citations, "json", refs.library);
     
     for (const item of refs.citations) {
       const itemDiv = document.createElement('div');
       itemDiv.classList.add('reference-div');
 
-      const itemData = refData.flat(1).filter(r => r['id'] == item)[0]
+      const itemData = refData.flat(1).filter(r => r['id'] == item)[0];
 
       itemDiv.innerHTML += `<div class="reference-citekey" data-citekey="${itemData['id']}">@${itemData['id']}</div>`;
       itemDiv.innerHTML += `<div class="reference-title"><a data-citekey="${itemData['id']}" href='#0'>${itemData['title']}</a></div>`;

@@ -21,12 +21,13 @@ async function makeJsonRpcHttpRequest(options, data) {
     const body = {'body': data}
     const requestOptions = Object.assign({ ...options }, body)
     const req = await requestUrl(requestOptions);
-    if (req.json.result[0] == '200' && req.json.result[1] == 'text/plain'){
-        const resultStr = req.json.result[2];
+    const reqJson = req.json;
+    if (reqJson['result'][0] == '200' && reqJson['result'][1] == 'text/plain'){
+        const resultStr = reqJson.result[2];
 	    const resultJson = JSON.parse(resultStr);
         return resultJson
-    } else if ('jsonrpc' in req.json && req.status == 200){
-        const resultJson = req.json.result;
+    } else if ('jsonrpc' in reqJson && req.status == 200){
+        const resultJson = reqJson['result'];
         return resultJson
     };
 }
@@ -169,7 +170,9 @@ export async function exportItems(citeKeys, translator, libraryID) {
     
         const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
         
-        return result;
+        const resultJson = JSON.parse(result) // item.export json actually returns json in a string format, so need to convert back to object
+        
+        return resultJson;
 
     }
     catch (error) {
