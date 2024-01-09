@@ -170,9 +170,7 @@ export async function exportItems(citeKeys, translator, libraryID) {
     
         const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
         
-        const resultJson = JSON.parse(result) // item.export json actually returns json in a string format, so need to convert back to object
-        
-        return resultJson;
+        return result;
 
     }
     catch (error) {
