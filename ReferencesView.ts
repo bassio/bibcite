@@ -123,9 +123,15 @@ export class ReferencesView extends ItemView {
         
 				const re = /\[(@[a-zA-Z0-9_-]+[ ]*;?[ ]*)+\]/g
 
-				let matches = fileContent.match(re).map(item => item.slice(1, -1).split(";").map( i => i.trim().replace("@", "") ));
+				let matches = fileContent.match(re)
         
-        matches = matches.flat(1).filter((item) => citekeys.includes(item));
+        if (matches){
+          matches = matches.map(item => item.slice(1, -1).split(";").map( i => i.trim().replace("@", "") ));
+          matches = matches.flat(1).filter((item) => citekeys.includes(item));
+        } else {
+          matches = [];
+        }
+        
 
 				const matches_unique = new Set(matches)
 

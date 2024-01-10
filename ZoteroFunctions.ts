@@ -84,20 +84,19 @@ export async function locateCollection(collectionPath) {
 
 
     let children = Object.values(allCollectionsDict).filter(c => c.parentCollection === matchedTopCollectionKey);
-    let matchedChildCollectionKey = null;
-
-
+    let matchedChildCollectionKey = matchedTopCollectionKey;
+      
     for (const cname of after.slice(1)) {
         if (matchedChildCollectionKey) {
             children = Object.values(allCollectionsDict).filter(c => c.parentCollection === matchedChildCollectionKey);
+        } else {
+            return { libraryId: null, collectionId: null };
         }
 
         for (const child of children) {
+            
+			matchedChildCollectionKey = children.find(obj => { return obj.name === cname})?.key;
 
-			if (cname === child.name) {
-                matchedChildCollectionKey = child.key;
-                break;
-            }
         }
     }
 
@@ -132,6 +131,9 @@ export async function exportCollection(collectionId, libraryId, bibFormat = 'bet
 
     }
     catch (error) {
+        if (error.message === 'Request failed, status 404'){
+            throw Error("Unable to find Zotero collection.")
+        }
         throw error;
     }
 
