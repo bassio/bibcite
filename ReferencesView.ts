@@ -162,8 +162,7 @@ export class ReferencesView extends ItemView {
     const containerDiv = document.createElement('div');
     containerDiv.classList.add('references-div');
 
-    // item.export json actually returns json in a string format, so need to convert back to object
-    const refData = JSON.parse(await exportItems(refs.citations, "json", refs.library));
+    const refData = await exportItems(refs.citations, "json", refs.library);
     
     for (const item of refs.citations) {
       const itemDiv = document.createElement('div');
