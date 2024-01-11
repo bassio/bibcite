@@ -170,8 +170,14 @@ export async function exportItems(citeKeys, translator, libraryID) {
             params: [citeKeys, translator, libraryID]
         };
     
-        const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
+        let result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
         
+        if (typeof(result) === 'string') {
+            result = JSON.parse(result);
+        } else {
+            result = result;
+        };
+
         return result;
 
     }
