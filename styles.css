@@ -27,11 +27,25 @@
     vertical-align: middle;
 }
 
+.container-div .references-header button {
+    --icon-size: var(--icon-xs);
+    padding: 8px;
+    vertical-align: middle;
+}
 
 .container-div .references-header .refresh-button{
-    vertical-align: middle;
     float: right;
-    --icon-size: var(--icon-xs);
+    margin-left: 2px;
+}
+
+.container-div .references-header .mode-button{
+    float: right;
+    margin: 0px 2px;
+}
+
+.container-div .references-header .annotations-button{
+    float: right;
+    margin: 0px 2px;
 }
 
 .container-div .pane-empty {
@@ -42,7 +56,14 @@
     font-weight: bold;
 }
 
-.reference-div  .annotations-icon{
+.references-div .reference-div .reference-citekey{
+    color: var(--text-normal);
+}
+.bibliography-div .reference-div .reference-citekey{
+    color: var(--text-muted);
+}
+
+.reference-div .annotations-icon{
     cursor: pointer;
     --icon-size: var(--icon-xs);
     padding-left: var(--icon-xs-stroke-width);

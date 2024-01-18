@@ -7,6 +7,8 @@ export const ReferencesViewType = 'ReferencesView';
 
 const fs = require('fs');
 
+const ZoteroFrontmatterEntry = 'zotero_collection'
+
 interface ReferencesViewPersistedState {
   zotero_collection: string;
   libraryName: string;
@@ -22,26 +24,62 @@ export class ReferencesView extends ItemView {
     super(leaf);
     this.plugin = plugin;
     this.contentEl.addClass('bibcite-references');
-    this.setEmptyView();
+    this.setEmptyView(this.plugin.settings.defaultViewMode == 'bibliography' ? true : false);
     this.addAction("refresh-cw", "Refresh References", () => {
       this.renderReferences();
     })
   }
 
-  setViewContent(bib: HTMLElement) {
+  setHeader(header: HTMLElement, bibliographyMode=false){
+    const mode = bibliographyMode ? 'Bibliography' : 'References' 
+    const oppositeMode = bibliographyMode ? 'References' : 'Bibliography'
+
+    const headerText = header.createEl("span", { text: mode, cls: "references-header-text" });
+    const refreshButton = header.createEl("button", { text: "Refresh", cls: "refresh-button" , title: "Refresh"});
+    setIcon(refreshButton, "refresh-cw");
+    const modeButton = header.createEl("button", { text: "Switch References/Bibliography Mode", cls: "mode-button", title: `Switch to ${oppositeMode} mode` });
+    setIcon(modeButton, "book-copy");
+    const annotationsButton = header.createEl("button", { text: "Annotations", cls: "annotations-button", title: `Annotations` });
+    
+    setIcon(annotationsButton, "book-open-text");
+    annotationsButton.onclick = async (e) => {
+      const refs = bibliographyMode == false ? this.references['citations']: this.references['bibliography'];
+      const attachmentAnnotations = await this.processAttachments(refs);
+      new MultiAnnotationsModal(this.app, attachmentAnnotations).open();
+    };
+
+    this.annotationsButton = annotationsButton;
+
+    if (!bibliographyMode){
+      refreshButton.onclick = (e) => {
+        this.renderReferences();
+      }
+      modeButton.onclick = (e) => {
+        this.renderBibliography();
+      }
+    } else {
+      refreshButton.onclick = (e) => {
+        this.renderBibliography();
+      }
+      modeButton.onclick = (e) => {
+        this.renderReferences();
+      }
+    }
+
+
+  }
+
+  setViewContent(content: HTMLElement, bibliographyMode=false) {
     this.contentEl.empty();
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
     const header = containerDiv.createDiv({cls:"references-header"});
-    const headerText = header.createEl("span", { text: "References", cls: "references-header-text" });
-    this.button = header.createEl("button", { text: "Refresh Bibliography", cls: "refresh-button" });
-    setIcon(this.button, "refresh-cw");
-    this.button.onclick = (e) => {
-      this.renderReferences();
-    }
-    if (!bib) {
+
+    this.setHeader(header, bibliographyMode);
+
+    if (!content) {
       this.setEmptyView();
     } else {
-      this.contentEl.append(bib);
+      this.contentEl.append(content);
     }
   }
 
@@ -50,7 +88,7 @@ export class ReferencesView extends ItemView {
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
     const header = containerDiv.createDiv({cls:"references-header"});
     const headerText = header.createEl("span", { text: "References", cls: "references-header-text" });
-    this.button = header.createEl("button", { text: "Refresh Bibliography", cls: "refresh-button" });
+    this.button = header.createEl("button", { text: "Refresh", cls: "refresh-button" });
     setIcon(this.button, "refresh-cw");
     this.button.onclick = (e) => {
       this.renderReferences();
@@ -69,20 +107,25 @@ export class ReferencesView extends ItemView {
     }
   }
 
-  setEmptyView() {
+  setEmptyView(bibliographyMode=false) {
     this.contentEl.empty();
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
     const header = containerDiv.createDiv({cls:"references-header"});
-    const headerText = header.createEl("span", { text: "References", cls: "references-header-text" });
-    this.button = header.createEl("button", { text: "Refresh Bibliography", cls: "refresh-button" });
-    setIcon(this.button, "refresh-cw");
-    this.button.onclick = (e) => {
-      this.renderReferences();
+
+    this.setHeader(header, bibliographyMode);
+
+    if (!bibliographyMode){
+      containerDiv.createDiv({
+        cls: 'pane-empty',
+        text: 'No citations found in the current document.',
+      });
+    } else {
+      containerDiv.createDiv({
+        cls: 'pane-empty',
+        text: 'No bibliography entries found for the current document.',
+      });
     }
-    containerDiv.createDiv({
-      cls: 'pane-empty',
-      text: 'No set bibliography and/or citations found for the current document.',
-    });
+
   }
 
   getViewType() {
@@ -99,10 +142,13 @@ export class ReferencesView extends ItemView {
 
   processReferences = async () => {
 
-		const { settings, view } = this;
+    let refs;
+
+    const { settings, view } = this;
 
 		const activeView = this.plugin.app.workspace.getActiveFileView();
 		const activeFile = this.plugin.app.workspace.getActiveFile();
+
 
 		if (activeFile) {
 			try {
@@ -111,16 +157,21 @@ export class ReferencesView extends ItemView {
 		    const frontMatter = cache.frontmatter;
 
         if (!frontMatter){
-          return {'library': null, 'citations': []}
+          refs = {'library': null, 'citations': [], 'bibliography': []};
+          this.references = refs;
+          return this.references;
         }
         if (!Object.hasOwn(frontMatter, 'zotero_collection')){
-          return {'library': null, 'citations': []}
+          refs = {'library': null, 'citations': [], 'bibliography': []};
+          this.references = refs;
+          return this.references;
         }
 
         const libraryName = frontMatter.zotero_collection.split("/")[0];
 
         const citekeys = await collectionCitekeys(frontMatter.zotero_collection);
-        
+        const citekeys_unique = new Set(citekeys)
+
 				const re = /\[(@[a-zA-Z0-9_-]+[ ]*;?[ ]*)+\]/g
 
 				let matches = fileContent.match(re)
@@ -135,14 +186,22 @@ export class ReferencesView extends ItemView {
 
 				const matches_unique = new Set(matches)
 
-				return  {'library': libraryName, 'citations': [...matches_unique]};
+        refs = {'library': libraryName, 'citations': [...matches_unique], 'bibliography': [...citekeys_unique]};
+        this.references = refs;
+        return this.references;
 
 			} catch (e) {
 				console.error(e);
-				return {'library': null, 'citations': [], 'error': e};
+				refs = {'library': null, 'citations': [], 'bibliography': [], 'error': e};
+        this.references = refs;
+        return this.references;
+
 			}
 		} else {
-			return {'library': null, 'citations': []};
+			refs = {'library': null, 'citations': [], 'bibliography': []};
+      this.references = refs;
+      return this.references;
+
 		};
 	};
 
@@ -174,7 +233,14 @@ export class ReferencesView extends ItemView {
       itemDiv.innerHTML += `<div class="reference-title"><a data-citekey="${itemData['id']}" href='#0'>${itemData['title']}</a></div>`;
       
       const journal = itemData['container-title-short'] != '' ? itemData['container-title-short'] : itemData['container-title']
-      const issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : ''
+
+      let issueDate;
+
+      if ('date-parts' in itemData['issued']){
+        issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : '';
+      } else if ('literal' in itemData['issued']){
+        issueDate = itemData['issued']['literal'].split(" ")[0];
+      }
 
       itemDiv.innerHTML += `<div class="reference-journal">${journal} ${issueDate}</div>`;
 
@@ -182,24 +248,100 @@ export class ReferencesView extends ItemView {
 
     }
 
-  this.setViewContent(containerDiv);
+  this.setViewContent(containerDiv, false); // bibliographyMode=false
 
-  this.renderAttachments(refs);
+  this.renderAttachments(refs.citations);
 
   };
 
+  async renderBibliography() {
 
-  async renderAttachments(refs) {
+    const refs = await this.processReferences();
+    
+    if (refs.bibliography.length == 0){
+      if ('error' in refs) {
+        this.setErrorView(refs.error);
+      } else {
+        this.setEmptyView(true);
+      };
+      return
+    }
+
+    const containerDiv = document.createElement('div');
+    containerDiv.classList.add('bibliography-div');
+
+    const refData = await exportItems(refs.bibliography, "json", refs.library);
+    
+    for (const item of refs.bibliography) {
+      const itemDiv = document.createElement('div');
+      itemDiv.classList.add('reference-div');
+
+      const itemData = refData.flat(1).filter(r => r['id'] == item)[0];
+
+      itemDiv.innerHTML += `<div class="reference-citekey" data-citekey="${itemData['id']}">@${itemData['id']}</div>`;
+      itemDiv.innerHTML += `<div class="reference-title"><a data-citekey="${itemData['id']}" href='#0'>${itemData['title']}</a></div>`;
+      
+      const journal = itemData['container-title-short'] != '' ? itemData['container-title-short'] : itemData['container-title']
+
+      let issueDate;
+
+      if ('date-parts' in itemData['issued']){
+        issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : '';
+      } else if ('literal' in itemData['issued']){
+        issueDate = itemData['issued']['literal'].split(" ")[0];
+      }
+
+      itemDiv.innerHTML += `<div class="reference-journal">${journal} ${issueDate}</div>`;
+
+      containerDiv.appendChild(itemDiv);
+
+    }
+
+    this.setViewContent(containerDiv, true); // bibliographyMode=false
+
+  this.renderAttachments(refs.bibliography);
+
+  };
+
+  async processAttachments(referenceEntries):Promise<ItemAnnotationsData[]> {
+
+    const allAnnotationsData:ItemAnnotationsData[] = [];
+    
+    for (const item of referenceEntries) {
+      
+      const allAttachments = await attachments(item)
+      
+      const itemAttachments = allAttachments.filter(attach => attach.path != false)
+
+      if (itemAttachments.length){
+        const linkAttachment = itemAttachments[0]['open'];
+        const linkAnnotations = itemAttachments[0]['annotations'];
+
+        if (linkAnnotations?.length){
+
+          const data:ItemAnnotationsData = {citekey: item, parentUri: linkAttachment, annotations: linkAnnotations};
+
+          allAnnotationsData.push(data);
+  
+        }
+        
+      }
+
+    }
+
+    return allAnnotationsData;
+
+  }
+
+  async renderAttachments(referenceEntries) {
 
     const containerDiv = document.createElement('div');
     containerDiv.classList.add('references-div');
     
-    for (const item of refs.citations) {
+    for (const item of referenceEntries) {
       
       const allAttachments = await attachments(item)
       
-      console.log(allAttachments);
-
       const itemAttachments = allAttachments.filter(attach => attach.path != false)
 
       if (itemAttachments.length){
@@ -209,7 +351,7 @@ export class ReferencesView extends ItemView {
         const linkDomElement = this.contentEl.querySelector(`.reference-div .reference-title a[data-citekey='${item}']`);
         linkDomElement?.setAttribute('href', linkAttachment);
 
-        if (linkAnnotations.length){
+        if (linkAnnotations?.length){
 
           const citeKeyDomElement = this.contentEl.querySelector(`.reference-div .reference-citekey[data-citekey='${item}']`);
 
@@ -224,8 +366,6 @@ export class ReferencesView extends ItemView {
           citeKeyDomElement?.appendChild(annotationsIcon);
   
         }
-        
-      } else {
         
       }
 
@@ -261,7 +401,7 @@ export class AnnotationsModal extends Modal {
     this.renderContent();
   };
 
-  private renderContent() {
+  processContent() {
     const citekey = this._citekey;
     const fragment = document.createDocumentFragment();
     fragment.createEl("h2", { text: `Annotations of @${citekey}` });
@@ -270,14 +410,20 @@ export class AnnotationsModal extends Modal {
       this.renderAnnotation(fragment, annotation);
     }
 
+    return fragment;
+
+  }
+
+  renderContent() {
+    const fragment = this.processContent();
     this.contentEl.appendChild(fragment);
   }
 
-  private renderEmptyContent(fragment: DocumentFragment) {
+  renderEmptyContent(fragment: DocumentFragment) {
     fragment.createEl("p", "There are no annotations associated with this reference.");
   }
 
-  private renderAnnotation(fragment: DocumentFragment, annotation: Object){
+  renderAnnotation(fragment: DocumentFragment, annotation: Object){
     const annotationDiv = fragment.createDiv({cls: ["annotation-div", `annotation-${annotation.annotationType}`] });
 
     if (annotation.annotationType == 'highlight'){
@@ -311,4 +457,59 @@ export class AnnotationsModal extends Modal {
 
     }
   }
+}
+
+
+
+interface ItemAnnotationsData {
+  citekey: string;
+  parentUri: string;
+  annotations: Object;
+}
+
+
+
+export class MultiAnnotationsModal extends Modal {
+  private _data: ItemAnnotationsData[];
+
+  constructor(app: App, private annotationData: ItemAnnotationsData[]) {
+    super(app);
+    this._data = annotationData;
+  }
+
+  onOpen() {
+    this.renderContent();
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+
+  onSelectReference = (citekey: string) => {
+    this.contentEl.empty();
+    this.renderContent();
+  };
+
+  processContent() {
+    const fragment = document.createDocumentFragment();
+
+    for (const data of this._data) {
+      const modal = new AnnotationsModal(this.app, data.citekey, data.parentUri, data.annotations);
+      const annotationFragment = modal.processContent();
+      fragment.appendChild(annotationFragment)
+    }
+    
+    return fragment;
+
+  }
+
+  renderContent() {
+    const fragment = this.processContent();
+    this.contentEl.appendChild(fragment);
+  }
+
+  private renderEmptyContent(fragment: DocumentFragment) {
+    fragment.createEl("p", "No annotations found for this set of references.");
+  }
+
 }

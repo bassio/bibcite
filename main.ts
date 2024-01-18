@@ -5,11 +5,11 @@ import { ReferencesView, ReferencesViewType } from './ReferencesView.ts';
 
 
 interface BibcitePluginSettings {
-	mySetting: string;
+	defaultViewMode: string;
 }
 
 const DEFAULT_SETTINGS: BibcitePluginSettings = {
-	mySetting: 'default'
+	defaultViewMode: 'references'
 }
 
 export default class BibcitePlugin extends Plugin {
@@ -22,8 +22,15 @@ export default class BibcitePlugin extends Plugin {
     set activeFilePath(path) {
         if (path != this._activeFilePath){
 			this._activeFilePath = path;
-			console.log("activeFilePath changed!");	
-			this.view?.renderReferences();
+			console.log("activeFilePath changed!");
+
+			if (this.settings.defaultViewMode == 'references'){
+				this.view?.renderReferences();
+			} else if (this.settings.defaultViewMode == 'bibliography'){
+				this.view?.renderBibliography();
+			} else {
+				this.view?.renderReferences();
+			}
 		}
     }
 
@@ -52,6 +59,7 @@ export default class BibcitePlugin extends Plugin {
 			this.activeFilePath = activeFile.path;
 		}));
 	  
+		this.addSettingTab(new BibciteSettingTab(this.app, this));
 
 		await this.initLeaf();
 
@@ -105,8 +113,6 @@ export default class BibcitePlugin extends Plugin {
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -162,23 +168,7 @@ export default class BibcitePlugin extends Plugin {
 
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
+class BibciteSettingTab extends PluginSettingTab {
 	plugin: BibcitePlugin;
 
 	constructor(app: App, plugin: BibcitePlugin) {
@@ -191,15 +181,22 @@ class SampleSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		containerEl.createEl('h2', { text: 'Bibcite Plugin Settings' });
+
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+			.setName('Default References View Mode')
+			.setDesc('The default view mode for the right-sided References view. Options include "References mode" (default) and "Bibliography mode".')
+			.addDropdown((dropdown) => {
+				dropdown
+				.addOption('references', "References mode")
+				.addOption('bibliography', 'Bibliography mode')
+				.setValue(this.plugin.settings.defaultViewMode)
 				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+							this.plugin.settings.defaultViewMode = value;
+							this.plugin.saveSettings();
+			  				})
+			});
+			  
 	}
+	
 }
