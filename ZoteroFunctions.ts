@@ -108,7 +108,7 @@ export async function exportCollection(collectionId, libraryId, bibFormat = 'bet
 
 	const url_path = `/better-bibtex/collection?/${libraryId}/${collectionId}.${bibFormat}`;
 
-    const url = `http://127.0.0.1:23119/better-bibtex/collection?/${libraryId}/${collectionId}.${bibFormat}`;
+    const url = `http://127.0.0.1:23119/better-bibtex/collection?/${libraryId}/${collectionId}.${bibFormat}&exportNotes=true`;
 
 	const options = {
         url: url,
@@ -188,13 +188,13 @@ export async function exportItems(citeKeys, translator, libraryID) {
         
 }
 
-export async function attachments(citeKey) {
+export async function attachments(citeKey, library) {
     try {
 
         const jsonRpcData = {
             jsonrpc: "2.0",
             method: "item.attachments",
-            params: [citeKey]
+            params: [citeKey, library]
         };
 
         const result = await makeJsonRpcHttpRequest(baseOptions, JSON.stringify(jsonRpcData));
@@ -228,8 +228,10 @@ export async function collectionCitekeys(collectionPath) {
 
 export async function collectionCitekeysTitles(collectionPath) {
     try {
+        console.log(collectionPath);
         const resultJson = await exportCollectionPath(collectionPath, "json");
         const result_keys_title = resultJson.map(item => {return {'id': item.id, 'title': item.title} });
+        console.log(result_keys_title);
 	    return result_keys_title;
     } catch (error) {
         throw error;

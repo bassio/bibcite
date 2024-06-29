@@ -1,9 +1,19 @@
 import { ItemView, MarkdownView, WorkspaceLeaf, Modal, Notice, setIcon } from 'obsidian';
 
 import BibcitePlugin from './main';
-import { exportItems, attachments, collectionCitekeys } from "ZoteroFunctions.ts";
+import { exportItems } from "ZoteroFunctions.ts";
+import { ItemAnnotationsData, CollectionData, processCollection, processAttachmentAnnotations } from "ReferenceProcessing.ts";
+
 
 export const ReferencesViewType = 'ReferencesView';
+
+interface CollectionData {
+  library: string;
+  bibliography: string[];
+  data: Object;
+  citations?: string[];
+  error?: Error;
+}
 
 const fs = require('fs');
 
@@ -43,8 +53,7 @@ export class ReferencesView extends ItemView {
     
     setIcon(annotationsButton, "book-open-text");
     annotationsButton.onclick = async (e) => {
-      const refs = bibliographyMode == false ? this.references['citations']: this.references['bibliography'];
-      const attachmentAnnotations = await this.processAttachments(refs);
+      const attachmentAnnotations = await processAttachmentAnnotations(this.references, bibliographyMode);
       new MultiAnnotationsModal(this.app, attachmentAnnotations).open();
     };
 
@@ -128,6 +137,10 @@ export class ReferencesView extends ItemView {
 
   }
 
+  getReferencesViewMode() {
+    return this.plugin.settings.defaultViewMode;
+  }
+
   getViewType() {
     return ReferencesViewType;
   }
@@ -140,7 +153,7 @@ export class ReferencesView extends ItemView {
     return 'graduation-cap';
   }
 
-  processReferences = async () => {
+  async processReferences() {
 
     let refs;
 
@@ -151,27 +164,32 @@ export class ReferencesView extends ItemView {
 
 
 		if (activeFile) {
+
 			try {
+
 				const fileContent = await this.plugin.app.vault.cachedRead(activeView.file);
         const cache = this.plugin.app.metadataCache.getFileCache(activeFile);
 		    const frontMatter = cache.frontmatter;
 
         if (!frontMatter){
-          refs = {'library': null, 'citations': [], 'bibliography': []};
+          const refs:CollectionData = {library: null, citations: [], bibliography: [], data: []};
           this.references = refs;
           return this.references;
         }
         if (!Object.hasOwn(frontMatter, 'zotero_collection')){
-          refs = {'library': null, 'citations': [], 'bibliography': []};
+          const refs:CollectionData = {library: null, citations: [], bibliography: [], data: []};
           this.references = refs;
           return this.references;
         }
+        
+        const collectionPath = frontMatter.zotero_collection;
 
-        const libraryName = frontMatter.zotero_collection.split("/")[0];
+        let refData = await processCollection(collectionPath);
 
-        const citekeys = await collectionCitekeys(frontMatter.zotero_collection);
-        const citekeys_unique = new Set(citekeys)
+        const libraryName = refData['library'];
 
+        const citekeys = refData['data'].map((item) => item['id']);
+        
 				const re = /\[(@[a-zA-Z0-9_-]+[ ]*;?[ ]*)+\]/g
 
 				let matches = fileContent.match(re)
@@ -183,22 +201,23 @@ export class ReferencesView extends ItemView {
           matches = [];
         }
         
+        const matches_unique = new Set(matches)
+      
+        refData['citations'] = [...matches_unique];
+        
+        this.references = refData;
 
-				const matches_unique = new Set(matches)
-
-        refs = {'library': libraryName, 'citations': [...matches_unique], 'bibliography': [...citekeys_unique]};
-        this.references = refs;
         return this.references;
 
 			} catch (e) {
 				console.error(e);
-				refs = {'library': null, 'citations': [], 'bibliography': [], 'error': e};
+				refs = {'library': null, 'citations': [], 'bibliography': [], 'data': [], 'error': e};
         this.references = refs;
         return this.references;
 
 			}
 		} else {
-			refs = {'library': null, 'citations': [], 'bibliography': []};
+			refs = {'library': null, 'citations': [], 'bibliography': [], 'data': [], };
       this.references = refs;
       return this.references;
 
@@ -250,7 +269,7 @@ export class ReferencesView extends ItemView {
 
   this.setViewContent(containerDiv, false); // bibliographyMode=false
 
-  this.renderAttachments(refs.citations);
+  this.renderAttachments(refs, 'references');
 
   };
 
@@ -299,73 +318,44 @@ export class ReferencesView extends ItemView {
 
     this.setViewContent(containerDiv, true); // bibliographyMode=false
 
-  this.renderAttachments(refs.bibliography);
+    this.renderAttachments(refs, 'bibliography');
 
   };
 
-  async processAttachments(referenceEntries):Promise<ItemAnnotationsData[]> {
-
-    const allAnnotationsData:ItemAnnotationsData[] = [];
-    
-    for (const item of referenceEntries) {
-      
-      const allAttachments = await attachments(item)
-      
-      const itemAttachments = allAttachments.filter(attach => attach.path != false)
-
-      if (itemAttachments.length){
-        const linkAttachment = itemAttachments[0]['open'];
-        const linkAnnotations = itemAttachments[0]['annotations'];
-
-        if (linkAnnotations?.length){
-
-          const data:ItemAnnotationsData = {citekey: item, parentUri: linkAttachment, annotations: linkAnnotations};
-
-          allAnnotationsData.push(data);
-  
-        }
-        
-      }
-
-    }
-
-    return allAnnotationsData;
-
-  }
-
-  async renderAttachments(referenceEntries) {
+  async renderAttachments(collectionData, bibliographyMode) {
 
     const containerDiv = document.createElement('div');
     containerDiv.classList.add('references-div');
-    
-    for (const item of referenceEntries) {
-      
-      const allAttachments = await attachments(item)
-      
-      const itemAttachments = allAttachments.filter(attach => attach.path != false)
 
-      if (itemAttachments.length){
-        const linkAttachment = itemAttachments[0]['open'];
-        const linkAnnotations = itemAttachments[0]['annotations'];
+    if (bibliographyMode == 'references'){
+      const referenceEntries = collectionData.citations;
+      const bibliographyMode = false;
+    } else {
+      const referenceEntries = collectionData.bibliography;
+      const bibliographyMode = true;
+    }
 
-        const linkDomElement = this.contentEl.querySelector(`.reference-div .reference-title a[data-citekey='${item}']`);
-        linkDomElement?.setAttribute('href', linkAttachment);
+    const itemAnnotationDataArray:ItemAnnotationsData[] = await processAttachmentAnnotations(collectionData, bibliographyMode);
 
-        if (linkAnnotations?.length){
+    for (const itemAnnotationData of itemAnnotationDataArray) {
 
-          const citeKeyDomElement = this.contentEl.querySelector(`.reference-div .reference-citekey[data-citekey='${item}']`);
+      const linkDomElement = this.contentEl.querySelector(`.reference-div .reference-title a[data-citekey='${itemAnnotationData.citekey}']`);
+      linkDomElement?.setAttribute('href', itemAnnotationData.parentUri);
 
-          let annotationsIcon = document.createElement("span");
-          annotationsIcon.addClass("annotations-icon");
-          annotationsIcon.setAttribute("title", "Review Annotations");
-          setIcon(annotationsIcon, "book-open-text");
-          annotationsIcon.onclick = (e) => {
-            new AnnotationsModal(this.app, item, linkAttachment, linkAnnotations).open();
-          };
-          
-          citeKeyDomElement?.appendChild(annotationsIcon);
-  
-        }
+      if (itemAnnotationData.annotations.length){
+
+
+        const citeKeyDomElement = this.contentEl.querySelector(`.reference-div .reference-citekey[data-citekey='${itemAnnotationData.citekey}']`);
+
+        let annotationsIcon = document.createElement("span");
+        annotationsIcon.addClass("annotations-icon");
+        annotationsIcon.setAttribute("title", "Review Annotations");
+        setIcon(annotationsIcon, "book-open-text");
+        annotationsIcon.onclick = (e) => {
+          new AnnotationsModal(this.app, itemAnnotationData).open();
+        };
+        
+        citeKeyDomElement?.appendChild(annotationsIcon);
         
       }
 
@@ -381,11 +371,12 @@ export class AnnotationsModal extends Modal {
   private _parentUri: string;
   private _annotations: Object;
 
-  constructor(app: App, private citekey: string, private parentUri: string, private annotations: Object) {
+  constructor(app: App, private annotationData: ItemAnnotationsData) {
     super(app);
-    this._citekey = citekey;
-    this._parentUri = parentUri;
-    this._annotations = annotations;
+    this._citekey = annotationData.citekey;
+    this._parentUri = annotationData.parentUri;
+    this._annotations = annotationData.annotations;
+    this._data = annotationData.itemData;
   }
 
   onOpen() {
@@ -403,8 +394,10 @@ export class AnnotationsModal extends Modal {
 
   processContent() {
     const citekey = this._citekey;
+    const itemData = this._data;
     const fragment = document.createDocumentFragment();
-    fragment.createEl("h2", { text: `Annotations of @${citekey}` });
+    fragment.createEl("div", { text: `Annotations of @${citekey}`, cls: 'item-annotations-header' });
+    fragment.createEl("div", { text: `${itemData.title}`, cls: 'item-annotations-header-item-title'  });
 
     for (const annotation of this._annotations) {
       this.renderAnnotation(fragment, annotation);
@@ -460,21 +453,12 @@ export class AnnotationsModal extends Modal {
 }
 
 
-
-interface ItemAnnotationsData {
-  citekey: string;
-  parentUri: string;
-  annotations: Object;
-}
-
-
-
 export class MultiAnnotationsModal extends Modal {
   private _data: ItemAnnotationsData[];
 
   constructor(app: App, private annotationData: ItemAnnotationsData[]) {
     super(app);
-    this._data = annotationData;
+    this._data = annotationData.filter((item) => item.annotations.length); //only these that have annotations
   }
 
   onOpen() {
@@ -490,11 +474,21 @@ export class MultiAnnotationsModal extends Modal {
     this.renderContent();
   };
 
+  getCitekeys() {
+    const citekeys = this._data.map((item) => item['citekey']);
+    return citekeys;
+  }
+
+  async getReferencesData(){
+    const citekeys = this.getCitekeys();
+    const refData = await exportItems(citekeys, "json", refs.library);
+  }
+  
   processContent() {
     const fragment = document.createDocumentFragment();
 
-    for (const data of this._data) {
-      const modal = new AnnotationsModal(this.app, data.citekey, data.parentUri, data.annotations);
+    for (const data:ItemAnnotationsData of this._data) {
+      const modal = new AnnotationsModal(this.app, data);
       const annotationFragment = modal.processContent();
       fragment.appendChild(annotationFragment)
     }
