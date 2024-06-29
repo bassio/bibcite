@@ -40,21 +40,39 @@ export class ReferencesView extends ItemView {
     })
   }
 
-  setHeader(header: HTMLElement, bibliographyMode=false){
+  setHeader(header: HTMLElement, bibliographyMode=false, annotationsView=false){
+
     const mode = bibliographyMode ? 'Bibliography' : 'References' 
     const oppositeMode = bibliographyMode ? 'References' : 'Bibliography'
+    
+    var headerText;
 
-    const headerText = header.createEl("span", { text: mode, cls: "references-header-text" });
+    if (!annotationsView){
+      headerText = header.createEl("span", { text: mode, cls: "references-header-text" });
+    } else {
+      headerText = header.createEl("span", { text: 'Annotations', cls: "references-header-text" });
+    }
+    
+    this.headerText = headerText;
+
     const refreshButton = header.createEl("button", { text: "Refresh", cls: "refresh-button" , title: "Refresh"});
     setIcon(refreshButton, "refresh-cw");
+
     const modeButton = header.createEl("button", { text: "Switch References/Bibliography Mode", cls: "mode-button", title: `Switch to ${oppositeMode} mode` });
     setIcon(modeButton, "book-copy");
-    const annotationsButton = header.createEl("button", { text: "Annotations", cls: "annotations-button", title: `Annotations` });
-    
+
+    const annotationsButton = header.createEl("button", { text: `${mode} Annotations`, cls: "annotations-button", title: `Annotations` });
     setIcon(annotationsButton, "book-open-text");
     annotationsButton.onclick = async (e) => {
-      const attachmentAnnotations = await processAttachmentAnnotations(this.references, bibliographyMode);
-      new MultiAnnotationsModal(this.app, attachmentAnnotations).open();
+      const annotationsMode = this.getAnnotationsViewMode();
+
+      if (annotationsMode == 'modal') {
+        const attachmentAnnotations = await processAttachmentAnnotations(this.references, bibliographyMode);
+        new MultiAnnotationsModal(this.app, attachmentAnnotations).open();  
+      }
+      else if (annotationsMode == 'leaf') {
+        this.renderAnnotations(bibliographyMode);
+      }
     };
 
     this.annotationsButton = annotationsButton;
@@ -78,12 +96,12 @@ export class ReferencesView extends ItemView {
 
   }
 
-  setViewContent(content: HTMLElement, bibliographyMode=false) {
+  setViewContent(content: HTMLElement, bibliographyMode=false, annotationsView=false) {
     this.contentEl.empty();
     const containerDiv = this.contentEl.createDiv({cls:"container-div" });
     const header = containerDiv.createDiv({cls:"references-header"});
 
-    this.setHeader(header, bibliographyMode);
+    this.setHeader(header, bibliographyMode, annotationsView);
 
     if (!content) {
       this.setEmptyView();
@@ -139,6 +157,9 @@ export class ReferencesView extends ItemView {
 
   getReferencesViewMode() {
     return this.plugin.settings.defaultViewMode;
+  }
+  getAnnotationsViewMode() {
+    return this.plugin.settings.defaultAnnotationsMode;
   }
 
   getViewType() {
@@ -316,9 +337,27 @@ export class ReferencesView extends ItemView {
 
     }
 
-    this.setViewContent(containerDiv, true); // bibliographyMode=false
+    this.setViewContent(containerDiv, true); // bibliographyMode=true
 
     this.renderAttachments(refs, 'bibliography');
+  
+  }
+
+  async renderAnnotations(bibliographyMode) {
+
+    const containerDiv = document.createElement('div');
+    containerDiv.classList.add('annotations-leaf-div');
+
+    const attachmentAnnotations = await processAttachmentAnnotations(this.references, bibliographyMode);
+    const fragment = new MultiAnnotationsModal(this.app, attachmentAnnotations).processContent();
+
+    containerDiv.appendChild(fragment);
+
+    //containerDiv.appendChild(itemDiv);
+
+    this.setViewContent(containerDiv, !bibliographyMode, true);
+    
+    //this.renderAttachments(refs, 'bibliography');
 
   };
 
@@ -396,6 +435,7 @@ export class AnnotationsModal extends Modal {
     const citekey = this._citekey;
     const itemData = this._data;
     const fragment = document.createDocumentFragment();
+
     fragment.createEl("div", { text: `Annotations of @${citekey}`, cls: 'item-annotations-header' });
     fragment.createEl("div", { text: `${itemData.title}`, cls: 'item-annotations-header-item-title'  });
 
@@ -487,10 +527,13 @@ export class MultiAnnotationsModal extends Modal {
   processContent() {
     const fragment = document.createDocumentFragment();
 
+    const containerDiv = fragment.createEl('div');
+    containerDiv.classList.add('annotations-div');
+
     for (const data:ItemAnnotationsData of this._data) {
       const modal = new AnnotationsModal(this.app, data);
       const annotationFragment = modal.processContent();
-      fragment.appendChild(annotationFragment)
+      containerDiv.appendChild(annotationFragment)
     }
     
     return fragment;

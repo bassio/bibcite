@@ -1,10 +1,4 @@
 
-.reference-div{
-    margin-top: 11px;
-    margin-bottom: 13px;
-    font-size: small;
-}
-
 .bibcite-references{
     scrollbar-gutter: stable;
 }
@@ -52,8 +46,9 @@
     margin-top: 30px;
 }
 
-.reference-div .reference-citekey{
-    font-weight: bold;
+.references-div, .bibliography-div, .annotations-div {
+    user-select: text;
+    margin-block-start: var(--p-spacing);
 }
 
 .references-div .reference-div .reference-citekey{
@@ -63,11 +58,21 @@
     color: var(--text-muted);
 }
 
+.reference-div{
+    margin-top: 11px;
+    margin-bottom: 13px;
+    font-size: small;
+}
+
 .reference-div .annotations-icon{
     cursor: pointer;
     --icon-size: var(--icon-xs);
     padding-left: var(--icon-xs-stroke-width);
     vertical-align: middle;
+}
+
+.reference-div .reference-citekey{
+    font-weight: bold;
 }
 
 .reference-div .reference-title{
@@ -88,13 +93,7 @@
     font-style: italic;
 }
 
-.reference-div{
-    margin-top: 11px;
-    margin-bottom: 13px;
-    font-size: small;
-}
-
-.modal-content .item-annotations-header {
+.annotations-div .item-annotations-header {
     font-variant: var(--h2-variant);
     letter-spacing: -0.015em;
     line-height: var(--h2-line-height);
@@ -105,7 +104,7 @@
     font-family: var(--h2-font);
     margin-block-start: var(--p-spacing);
 }
-.modal-content .item-annotations-header-item-title{
+.annotations-div .item-annotations-header-item-title{
     font-variant: var(--h6-variant);
     letter-spacing: 0.015em;
     font-size: var(--h6-size);
@@ -117,30 +116,31 @@
     margin-block-end: var(--p-spacing);    
 }
 
-
-.modal-content .annotation-div {
+/**
+.annotations-div .annotation-div {
     margin-top: 10px;
     margin-bottom: 20px;
 }
+**/
 
-.modal-content .annotation-highlight {
+.annotations-div .annotation-highlight {
     font-size: var(--font-ui-small);
 }
 
-.modal-content .annotation-link-icon,
-.modal-content .annotation-copy-icon  {
+.annotations-div .annotation-link-icon,
+.annotations-div .annotation-copy-icon  {
     color: var(--text-normal);
     padding-left: var(--icon-xs-stroke-width);
     padding-right: var(--icon-xs-stroke-width);
     vertical-align: middle;
 }
 
-.modal-content .annotation-image {
+.annotations-div .annotation-image {
     text-align: center;
     font-size: var(--font-ui-small);
 }
 
-.modal-content .annotation-image img.annotation-img {
+.annotations-div .annotation-image img.annotation-img {
     display: block;
     margin: auto;
     width: 80%;

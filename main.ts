@@ -6,10 +6,12 @@ import { ReferencesView, ReferencesViewType } from './ReferencesView.ts';
 
 interface BibcitePluginSettings {
 	defaultViewMode: string;
+	defaultAnnotationsMode: string;
 }
 
 const DEFAULT_SETTINGS: BibcitePluginSettings = {
-	defaultViewMode: 'references'
+	defaultViewMode: 'references',
+	defaultAnnotationsMode: 'modal'
 }
 
 export default class BibcitePlugin extends Plugin {
@@ -184,8 +186,8 @@ class BibciteSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', { text: 'Bibcite Plugin Settings' });
 
 		new Setting(containerEl)
-			.setName('Default References View Mode')
-			.setDesc('The default view mode for the right-sided References view. Options include "References mode" (default) and "Bibliography mode".')
+			.setName('Default Reference List View Mode')
+			.setDesc('The default view mode for the References view. Options include "References mode" (default) and "Bibliography mode".')
 			.addDropdown((dropdown) => {
 				dropdown
 				.addOption('references', "References mode")
@@ -195,6 +197,20 @@ class BibciteSettingTab extends PluginSettingTab {
 							this.plugin.settings.defaultViewMode = value;
 							this.plugin.saveSettings();
 			  				})
+			});
+
+		new Setting(containerEl)
+			.setName('Default Annotations View Mode')
+			.setDesc('The default view mode for the Annotations. Options include "Modal" (default) and "In Leaf".')
+			.addDropdown((dropdown) => {
+				dropdown
+				.addOption('modal', "Modal")
+				.addOption('leaf', 'In Leaf')
+				.setValue(this.plugin.settings.defaultAnnotationsMode)
+				.onChange(async (value) => {
+							this.plugin.settings.defaultAnnotationsMode = value;
+							this.plugin.saveSettings();
+							})
 			});
 			  
 	}
