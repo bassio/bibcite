@@ -201,11 +201,11 @@ class BibciteSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Default Annotations View Mode')
-			.setDesc('The default view mode for the Annotations. Options include "Modal" (default) and "In Leaf".')
+			.setDesc('The default view mode for the Annotations. Options include "Modal" (default) and "View Pane".')
 			.addDropdown((dropdown) => {
 				dropdown
 				.addOption('modal', "Modal")
-				.addOption('leaf', 'In Leaf')
+				.addOption('viewpane', 'View Pane')
 				.setValue(this.plugin.settings.defaultAnnotationsMode)
 				.onChange(async (value) => {
 							this.plugin.settings.defaultAnnotationsMode = value;

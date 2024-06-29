@@ -228,10 +228,8 @@ export async function collectionCitekeys(collectionPath) {
 
 export async function collectionCitekeysTitles(collectionPath) {
     try {
-        console.log(collectionPath);
         const resultJson = await exportCollectionPath(collectionPath, "json");
         const result_keys_title = resultJson.map(item => {return {'id': item.id, 'title': item.title} });
-        console.log(result_keys_title);
 	    return result_keys_title;
     } catch (error) {
         throw error;

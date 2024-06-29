@@ -72,7 +72,7 @@ export class ReferencesView extends ItemView {
         const attachmentAnnotations = await processAttachmentAnnotations(this.references, bibliographyMode);
         new MultiAnnotationsModal(this.app, attachmentAnnotations).open();  
       }
-      else if (annotationsMode == 'leaf') {
+      else if (annotationsMode == 'viewpane') {
         this.renderAnnotations(bibliographyMode);
       }
     };
@@ -450,8 +450,18 @@ export class AnnotationsModal extends Modal {
   }
 
   renderContent() {
-    const fragment = this.processContent();
+    
+    const fragment = document.createDocumentFragment();
+
+    const containerDiv = fragment.createEl('div');
+    containerDiv.classList.add('annotations-div');
+    
+    const contentFragment = this.processContent();
+    
+    containerDiv.appendChild(contentFragment)
+
     this.contentEl.appendChild(fragment);
+  
   }
 
   renderEmptyContent(fragment: DocumentFragment) {
