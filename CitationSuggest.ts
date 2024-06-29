@@ -9,6 +9,7 @@ import {
 	TFile,
 } from 'obsidian';
 
+import {FrontMatterBibliographyString} from 'FrontMatter'
 import {collectionCitekeysTitles} from 'ZoteroFunctions'
 
 import BibcitePlugin from 'main';
@@ -92,8 +93,8 @@ export class CitationSuggest extends EditorSuggest<Suggestion> {
 		const noteFile = file;
 		const frontMatter = this.app.metadataCache.getFileCache(noteFile).frontmatter;
 
-		this.zotero_collection = frontMatter.zotero_collection
-
+		this.zotero_collection = frontMatter[FrontMatterBibliographyString]
+	
 		const query = LastAtSignToCursor;
 
         return {

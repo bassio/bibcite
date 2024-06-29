@@ -1,8 +1,10 @@
 import { ItemView, MarkdownView, WorkspaceLeaf, Modal, Notice, setIcon } from 'obsidian';
 
-import BibcitePlugin from './main';
-import { exportItems } from "ZoteroFunctions.ts";
-import { ItemAnnotationsData, CollectionData, processCollection, processAttachmentAnnotations } from "ReferenceProcessing.ts";
+import BibcitePlugin from 'main';
+
+import {FrontMatterBibliographyString} from "FrontMatter"
+import { exportItems } from 'ZoteroFunctions';
+import { ItemAnnotationsData, CollectionData, processCollection, processAttachmentAnnotations } from "ReferenceProcessing";
 
 
 export const ReferencesViewType = 'ReferencesView';
@@ -17,13 +19,13 @@ interface CollectionData {
 
 const fs = require('fs');
 
-const ZoteroFrontmatterEntry = 'zotero_collection'
-
-interface ReferencesViewPersistedState {
-  zotero_collection: string;
-  libraryName: string;
-  citations: string[];
-}
+/** 
+ * interface ReferencesViewPersistedState {
+ * zotero_collection: string;
+ * libraryName: string;
+ * citations: string[]
+ * }
+ */
 
 export class ReferencesView extends ItemView {
   plugin: BibcitePlugin;
@@ -197,13 +199,13 @@ export class ReferencesView extends ItemView {
           this.references = refs;
           return this.references;
         }
-        if (!Object.hasOwn(frontMatter, 'zotero_collection')){
+        if (!Object.hasOwn(frontMatter, FrontMatterBibliographyString)){
           const refs:CollectionData = {library: null, citations: [], bibliography: [], data: []};
           this.references = refs;
           return this.references;
         }
         
-        const collectionPath = frontMatter.zotero_collection;
+        const collectionPath = frontMatter[FrontMatterBibliographyString];
 
         let refData = await processCollection(collectionPath);
 

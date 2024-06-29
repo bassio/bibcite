@@ -6,7 +6,7 @@ const defaultHeaders = {
     'Accept': 'application/json',
     'Connection': 'keep-alive',
 };
-  
+
 const baseOptions = {
     url: 'http://localhost:23119/better-bibtex/json-rpc',
     hostname: 'localhost',

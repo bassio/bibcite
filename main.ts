@@ -1,7 +1,7 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 
-import { CitationSuggest } from "CitationSuggest.ts";
-import { ReferencesView, ReferencesViewType } from './ReferencesView.ts';
+import { CitationSuggest } from "CitationSuggest";
+import { ReferencesView, ReferencesViewType } from 'ReferencesView';
 
 
 interface BibcitePluginSettings {

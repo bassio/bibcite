@@ -1,4 +1,4 @@
-import { exportCollectionPath, attachments } from "ZoteroFunctions.ts";
+import { exportCollectionPath, attachments } from "ZoteroFunctions";
 
 
 export interface CollectionData {
