@@ -59,11 +59,21 @@ export async function processAttachmentAnnotations(collectionData:CollectionData
 
       const itemAttachmentsAll = await attachments(item, collectionData.library)
       
+      //const itemAttachmentsAll = itemData['attachments']
+      
       const itemAttachmentsWithPath = itemAttachmentsAll.filter(attach => attach.path != false)
 
       if (itemAttachmentsWithPath.length){
         const linkAttachment = itemAttachmentsWithPath[0]['open'];
-        const linkAnnotations = itemAttachmentsWithPath[0]['annotations'];
+
+        let linkAnnotations;
+        
+        if ('annotations' in itemAttachmentsWithPath[0]){
+            linkAnnotations = itemAttachmentsWithPath[0]['annotations'];
+        }
+        else{
+            linkAnnotations = [];
+        }
 
         const data:ItemAnnotationsData = {citekey: item, parentUri: linkAttachment, annotations: linkAnnotations, itemData: itemData};
 

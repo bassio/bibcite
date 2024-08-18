@@ -278,10 +278,17 @@ export class ReferencesView extends ItemView {
 
       let issueDate;
 
-      if ('date-parts' in itemData['issued']){
-        issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : '';
-      } else if ('literal' in itemData['issued']){
-        issueDate = itemData['issued']['literal'].split(" ")[0];
+      try{
+
+        if ('date-parts' in itemData['issued']){
+          issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : '';
+        } else if ('literal' in itemData['issued']){
+          issueDate = itemData['issued']['literal'].split(" ")[0];
+        }
+        
+      }
+      catch {
+        issueDate = "____";
       }
 
       itemDiv.innerHTML += `<div class="reference-journal">${journal} ${issueDate}</div>`;
@@ -363,17 +370,20 @@ export class ReferencesView extends ItemView {
 
   };
 
-  async renderAttachments(collectionData, bibliographyMode) {
+  async renderAttachments(collectionData, bibliographyModeString:String) {
 
     const containerDiv = document.createElement('div');
     containerDiv.classList.add('references-div');
 
-    if (bibliographyMode == 'references'){
-      const referenceEntries = collectionData.citations;
-      const bibliographyMode = false;
+    var referenceEntries;
+    var bibliographyMode;
+
+    if (bibliographyModeString == 'references'){
+      referenceEntries = collectionData.citations;
+      bibliographyMode = false;
     } else {
-      const referenceEntries = collectionData.bibliography;
-      const bibliographyMode = true;
+      referenceEntries = collectionData.bibliography;
+      bibliographyMode = true;
     }
 
     const itemAnnotationDataArray:ItemAnnotationsData[] = await processAttachmentAnnotations(collectionData, bibliographyMode);
