@@ -334,10 +334,17 @@ export class ReferencesView extends ItemView {
 
       let issueDate;
 
-      if ('date-parts' in itemData['issued']){
-        issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : '';
-      } else if ('literal' in itemData['issued']){
-        issueDate = itemData['issued']['literal'].split(" ")[0];
+      try{
+
+        if ('date-parts' in itemData['issued']){
+          issueDate = itemData['issued']['date-parts'][0][0] != undefined ? itemData['issued']['date-parts'][0][0] : '';
+        } else if ('literal' in itemData['issued']){
+          issueDate = itemData['issued']['literal'].split(" ")[0];
+        }
+        
+      }
+      catch {
+        issueDate = "____";
       }
 
       itemDiv.innerHTML += `<div class="reference-journal">${journal} ${issueDate}</div>`;
