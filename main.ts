@@ -63,7 +63,9 @@ export default class BibcitePlugin extends Plugin {
 	  
 		this.addSettingTab(new BibciteSettingTab(this.app, this));
 
-		await this.initLeaf();
+		this.app.workspace.onLayoutReady(async () => {
+			await this.initLeaf();
+		});
 
 		/*
 		// This creates an icon in the left ribbon.
@@ -148,18 +150,14 @@ export default class BibcitePlugin extends Plugin {
 	}
 
 	async initLeaf() {
-		if (this.view) return this.revealLeaf();
+		if (this.app.workspace.getLeavesOfType(ReferencesViewType).length) {
+			return;
+		};
 
 		await this.app.workspace.getRightLeaf(false).setViewState({
 			type: ReferencesViewType,
 		});
 
-		this.revealLeaf();
-
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (activeView) {
-			this.view?.renderReferences();
-		}
 	}
 
 	revealLeaf() {
